@@ -64,9 +64,17 @@ const Navbar = () => {
               className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 transition hover:bg-white/10"
               type="button"
             >
-              <span className="grid size-9 place-items-center rounded-full bg-white font-bold text-primary">
-                {avatarLetter}
-              </span>
+              {sessionUser.profileImage ? (
+                <img
+                  alt={displayName}
+                  className="size-9 rounded-full object-cover"
+                  src={sessionUser.profileImage}
+                />
+              ) : (
+                <span className="grid size-9 place-items-center rounded-full bg-white font-bold text-primary">
+                  {avatarLetter}
+                </span>
+              )}
               <span>{displayName}</span>
             </button>
 

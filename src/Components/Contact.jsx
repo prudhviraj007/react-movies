@@ -1,16 +1,34 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
+const USERS_STORAGE_KEY = "movieAppUsers";
+
 const emptyRegisterForm = {
   fullName: "",
   gmail: "",
   phone: "",
   password: "",
+  profileImage: "",
 };
 
 const emptyLoginForm = {
   gmail: "",
   password: "",
+};
+
+const getRegisteredUsers = () => {
+  try {
+    const users = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY));
+    const oldUser = JSON.parse(localStorage.getItem("movieAppUser"));
+
+    if (Array.isArray(users)) {
+      return users;
+    }
+
+    return oldUser ? [oldUser] : [];
+  } catch {
+    return [];
+  }
 };
 
 const Contact = () => {
@@ -28,6 +46,25 @@ const Contact = () => {
     }));
   };
 
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setRegisterForm((currentForm) => ({
+        ...currentForm,
+        profileImage: reader.result,
+      }));
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const handleLoginChange = (event) => {
     const { name, value } = event.target;
 
@@ -40,20 +77,38 @@ const Contact = () => {
   const handleRegisterSubmit = (event) => {
     event.preventDefault();
 
-    localStorage.setItem("movieAppUser", JSON.stringify(registerForm));
-    setMessage("Registration saved. You can see these details in Profile.");
+    const users = getRegisteredUsers();
+    const existingUser = users.find(
+      (user) => user.gmail.toLowerCase() === registerForm.gmail.toLowerCase()
+    );
+
+    if (existingUser) {
+      setMessage("This Gmail is already registered. Please login instead.");
+      return;
+    }
+
+    const newUser = {
+      ...registerForm,
+      id: Date.now(),
+    };
+
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([...users, newUser]));
+    localStorage.setItem("movieAppUser", JSON.stringify(newUser));
+    setMessage("Registration saved. You can login with these details now.");
     setRegisterForm(emptyRegisterForm);
   };
 
   const handleLoginSubmit = (event) => {
     event.preventDefault();
 
-    const savedUser = JSON.parse(localStorage.getItem("movieAppUser"));
+    const users = getRegisteredUsers();
+    const savedUser = users.find(
+      (user) =>
+        user.gmail.toLowerCase() === loginForm.gmail.toLowerCase() &&
+        user.password === loginForm.password
+    );
 
-    if (
-      savedUser?.gmail === loginForm.gmail &&
-      savedUser?.password === loginForm.password
-    ) {
+    if (savedUser) {
       localStorage.setItem("movieAppSession", JSON.stringify(savedUser));
       window.dispatchEvent(new Event("movieAppSessionChange"));
       setMessage(`Login successful. Welcome back, ${savedUser.fullName}.`);
@@ -72,8 +127,8 @@ const Contact = () => {
           </p>
           <h1>Join the movie community.</h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-light-200 sm:text-lg">
-            Register to save your movie preferences, or log in to continue
-            exploring your watchlist.
+            Register with your profile image, or login to show only your own
+            details in the navbar and profile page.
           </p>
         </div>
 
@@ -85,7 +140,10 @@ const Contact = () => {
                   ? "bg-white text-primary"
                   : "text-light-200 hover:text-white"
               }`}
-              onClick={() => setActiveForm("register")}
+              onClick={() => {
+                setActiveForm("register");
+                setMessage("");
+              }}
               type="button"
             >
               Register
@@ -96,7 +154,10 @@ const Contact = () => {
                   ? "bg-white text-primary"
                   : "text-light-200 hover:text-white"
               }`}
-              onClick={() => setActiveForm("login")}
+              onClick={() => {
+                setActiveForm("login");
+                setMessage("");
+              }}
               type="button"
             >
               Login
@@ -106,12 +167,31 @@ const Contact = () => {
           {activeForm === "register" ? (
             <form className="mt-8 grid gap-5" onSubmit={handleRegisterSubmit}>
               <h2>Create account</h2>
+
+              <label className="grid gap-2 text-sm font-medium text-white">
+                Profile Image
+                <input
+                  accept="image/*"
+                  className="rounded-lg border border-light-100/10 bg-primary px-4 py-3 text-white outline-none transition file:mr-4 file:rounded file:border-0 file:bg-white file:px-3 file:py-2 file:font-semibold file:text-primary focus:border-light-100/40"
+                  onChange={handleImageChange}
+                  type="file"
+                />
+              </label>
+
+              {registerForm.profileImage && (
+                <img
+                  alt="Profile preview"
+                  className="size-24 rounded-full border border-light-100/20 object-cover"
+                  src={registerForm.profileImage}
+                />
+              )}
+
               <label className="grid gap-2 text-sm font-medium text-white">
                 Full Name
                 <input
                   className="rounded-lg border border-light-100/10 bg-primary px-4 py-3 text-white outline-none transition focus:border-light-100/40"
-                  onChange={handleRegisterChange}
                   name="fullName"
+                  onChange={handleRegisterChange}
                   placeholder="Enter your full name"
                   required
                   type="text"
@@ -123,8 +203,8 @@ const Contact = () => {
                 Gmail
                 <input
                   className="rounded-lg border border-light-100/10 bg-primary px-4 py-3 text-white outline-none transition focus:border-light-100/40"
-                  onChange={handleRegisterChange}
                   name="gmail"
+                  onChange={handleRegisterChange}
                   placeholder="Enter your Gmail"
                   required
                   type="email"
@@ -136,8 +216,8 @@ const Contact = () => {
                 Phone Number
                 <input
                   className="rounded-lg border border-light-100/10 bg-primary px-4 py-3 text-white outline-none transition focus:border-light-100/40"
-                  onChange={handleRegisterChange}
                   name="phone"
+                  onChange={handleRegisterChange}
                   placeholder="Enter your phone number"
                   required
                   type="tel"
@@ -149,8 +229,8 @@ const Contact = () => {
                 Password
                 <input
                   className="rounded-lg border border-light-100/10 bg-primary px-4 py-3 text-white outline-none transition focus:border-light-100/40"
-                  onChange={handleRegisterChange}
                   name="password"
+                  onChange={handleRegisterChange}
                   placeholder="Create a password"
                   required
                   type="password"
@@ -172,8 +252,8 @@ const Contact = () => {
                 Gmail
                 <input
                   className="rounded-lg border border-light-100/10 bg-primary px-4 py-3 text-white outline-none transition focus:border-light-100/40"
-                  onChange={handleLoginChange}
                   name="gmail"
+                  onChange={handleLoginChange}
                   placeholder="Enter your Gmail"
                   required
                   type="email"
@@ -185,8 +265,8 @@ const Contact = () => {
                 Password
                 <input
                   className="rounded-lg border border-light-100/10 bg-primary px-4 py-3 text-white outline-none transition focus:border-light-100/40"
-                  onChange={handleLoginChange}
                   name="password"
+                  onChange={handleLoginChange}
                   placeholder="Enter your password"
                   required
                   type="password"
@@ -207,12 +287,16 @@ const Contact = () => {
             <div className="mt-6 rounded-lg border border-light-100/10 bg-primary p-4 text-sm text-light-200">
               <p>{message}</p>
               {message.includes("Registration saved") && (
-                <Link
+                <button
                   className="mt-3 inline-flex font-semibold text-white hover:text-light-100"
-                  to="/profile"
+                  onClick={() => {
+                    setActiveForm("login");
+                    setMessage("");
+                  }}
+                  type="button"
                 >
-                  View Profile
-                </Link>
+                  Login Now
+                </button>
               )}
               {message.includes("Login successful") && (
                 <Link

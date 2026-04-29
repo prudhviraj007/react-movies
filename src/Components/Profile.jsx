@@ -1,24 +1,42 @@
 import React, { useState } from "react";
 
+const USERS_STORAGE_KEY = "movieAppUsers";
+
 const emptyUser = {
   fullName: "",
   gmail: "",
   phone: "",
   password: "",
+  profileImage: "",
 };
 
-const getSavedUser = () => {
+const getSessionUser = () => {
   try {
-    return JSON.parse(localStorage.getItem("movieAppUser"));
+    return JSON.parse(localStorage.getItem("movieAppSession"));
   } catch {
     return null;
   }
 };
 
+const getRegisteredUsers = () => {
+  try {
+    const users = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY));
+    const oldUser = JSON.parse(localStorage.getItem("movieAppUser"));
+
+    if (Array.isArray(users)) {
+      return users;
+    }
+
+    return oldUser ? [oldUser] : [];
+  } catch {
+    return [];
+  }
+};
+
 export const Profile = () => {
-  const savedUser = getSavedUser();
-  const [user, setUser] = useState(savedUser);
-  const [editUser, setEditUser] = useState(savedUser || emptyUser);
+  const sessionUser = getSessionUser();
+  const [user, setUser] = useState(sessionUser);
+  const [editUser, setEditUser] = useState(sessionUser || emptyUser);
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -31,18 +49,52 @@ export const Profile = () => {
     }));
   };
 
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setEditUser((currentUser) => ({
+        ...currentUser,
+        profileImage: reader.result,
+      }));
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const handleUpdate = (event) => {
     event.preventDefault();
 
-    localStorage.setItem("movieAppUser", JSON.stringify(editUser));
-    localStorage.setItem("movieAppSession", JSON.stringify(editUser));
-    setUser(editUser);
+    const users = getRegisteredUsers();
+    const updatedUsers = users.map((registeredUser) =>
+      registeredUser.gmail === user.gmail
+        ? { ...editUser, id: registeredUser.id }
+        : registeredUser
+    );
+    const updatedUser = { ...editUser, id: user.id };
+
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    localStorage.setItem("movieAppUser", JSON.stringify(updatedUser));
+    localStorage.setItem("movieAppSession", JSON.stringify(updatedUser));
+    setUser(updatedUser);
     setIsEditing(false);
     setMessage("Profile updated successfully.");
     window.dispatchEvent(new Event("movieAppSessionChange"));
   };
 
   const handleDelete = () => {
+    const users = getRegisteredUsers();
+    const updatedUsers = users.filter(
+      (registeredUser) => registeredUser.gmail !== user.gmail
+    );
+
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
     localStorage.removeItem("movieAppUser");
     localStorage.removeItem("movieAppSession");
     setUser(null);
@@ -53,7 +105,7 @@ export const Profile = () => {
   };
 
   const displayName = user?.fullName || "Movie Fan";
-  const displayEmail = user?.gmail || "No registered Gmail";
+  const displayEmail = user?.gmail || "No logged-in Gmail";
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
@@ -62,9 +114,17 @@ export const Profile = () => {
         <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <aside className="rounded-lg border border-light-100/10 bg-dark-100 p-6 shadow-inner shadow-light-100/10 sm:p-8">
             <div className="flex items-center gap-4">
-              <div className="grid size-20 place-items-center rounded-lg bg-white text-3xl font-bold text-primary">
-                {avatarLetter}
-              </div>
+              {user?.profileImage ? (
+                <img
+                  alt={displayName}
+                  className="size-20 rounded-full border border-light-100/20 object-cover"
+                  src={user.profileImage}
+                />
+              ) : (
+                <div className="grid size-20 place-items-center rounded-full bg-white text-3xl font-bold text-primary">
+                  {avatarLetter}
+                </div>
+              )}
               <div>
                 <p className="text-sm uppercase tracking-[0.2em] text-light-200">
                   Profile
@@ -100,8 +160,8 @@ export const Profile = () => {
             <h1 className="mx-0 max-w-none text-left">Welcome back.</h1>
             <p className="mt-5 max-w-2xl leading-8 text-light-200">
               {user
-                ? "Your registered account details are shown below. You can edit, update, or delete the profile."
-                : "No registration details found. Please register from the Contact page to show your profile here."}
+                ? "Only your logged-in profile details are shown here."
+                : "No user is logged in. Please login from the Contact page to show your profile here."}
             </p>
 
             {message && (
@@ -153,7 +213,7 @@ export const Profile = () => {
 
               {!user && (
                 <p className="mt-5 text-light-200">
-                  Register first to manage profile details.
+                  Login first to manage profile details.
                 </p>
               )}
 
@@ -188,6 +248,24 @@ export const Profile = () => {
 
               {user && isEditing && (
                 <form className="mt-5 grid gap-5" onSubmit={handleUpdate}>
+                  <label className="grid gap-2 text-sm font-medium text-white">
+                    Profile Image
+                    <input
+                      accept="image/*"
+                      className="rounded-lg border border-light-100/10 bg-dark-100 px-4 py-3 text-white outline-none transition file:mr-4 file:rounded file:border-0 file:bg-white file:px-3 file:py-2 file:font-semibold file:text-primary focus:border-light-100/40"
+                      onChange={handleImageChange}
+                      type="file"
+                    />
+                  </label>
+
+                  {editUser.profileImage && (
+                    <img
+                      alt="Profile preview"
+                      className="size-24 rounded-full border border-light-100/20 object-cover"
+                      src={editUser.profileImage}
+                    />
+                  )}
+
                   <label className="grid gap-2 text-sm font-medium text-white">
                     Full Name
                     <input
