@@ -37,6 +37,7 @@ export const Profile = () => {
   const sessionUser = getSessionUser();
   const [user, setUser] = useState(sessionUser);
   const [editUser, setEditUser] = useState(sessionUser || emptyUser);
+  const [registeredUsers, setRegisteredUsers] = useState(getRegisteredUsers());
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -83,6 +84,7 @@ export const Profile = () => {
     localStorage.setItem("movieAppUser", JSON.stringify(updatedUser));
     localStorage.setItem("movieAppSession", JSON.stringify(updatedUser));
     setUser(updatedUser);
+    setRegisteredUsers(updatedUsers);
     setIsEditing(false);
     setMessage("Profile updated successfully.");
     window.dispatchEvent(new Event("movieAppSessionChange"));
@@ -98,6 +100,7 @@ export const Profile = () => {
     localStorage.removeItem("movieAppUser");
     localStorage.removeItem("movieAppSession");
     setUser(null);
+    setRegisteredUsers(updatedUsers);
     setEditUser(emptyUser);
     setIsEditing(false);
     setMessage("Profile deleted successfully.");
@@ -329,6 +332,75 @@ export const Profile = () => {
                     </button>
                   </div>
                 </form>
+              )}
+            </div>
+
+            <div className="mt-8 rounded-lg border border-light-100/10 bg-primary p-5">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-light-200">
+                    Registered profiles
+                  </p>
+                  <h2 className="mt-2">All registered users</h2>
+                </div>
+                <p className="text-sm text-gray-100">
+                  {registeredUsers.length} user
+                  {registeredUsers.length === 1 ? "" : "s"} registered
+                </p>
+              </div>
+
+              {registeredUsers.length === 0 ? (
+                <p className="mt-5 rounded-lg bg-dark-100 p-4 text-light-200">
+                  No registered users found.
+                </p>
+              ) : (
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  {registeredUsers.map((registeredUser) => {
+                    const registeredName = registeredUser.fullName || "User";
+                    const registeredLetter = registeredName
+                      .charAt(0)
+                      .toUpperCase();
+                    const isLoggedInUser =
+                      user?.gmail &&
+                      registeredUser.gmail.toLowerCase() ===
+                        user.gmail.toLowerCase();
+
+                    return (
+                      <article
+                        className="flex items-center gap-4 rounded-lg border border-light-100/10 bg-dark-100 p-4"
+                        key={registeredUser.id || registeredUser.gmail}
+                      >
+                        {registeredUser.profileImage ? (
+                          <img
+                            alt={registeredName}
+                            className="size-14 rounded-full object-cover"
+                            src={registeredUser.profileImage}
+                          />
+                        ) : (
+                          <div className="grid size-14 place-items-center rounded-full bg-white font-bold text-primary">
+                            {registeredLetter}
+                          </div>
+                        )}
+
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate font-semibold text-white">
+                              {registeredName}
+                            </p>
+                            {isLoggedInUser && (
+                              <span className="rounded bg-white px-2 py-1 text-xs font-bold text-primary">
+                                Logged in
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 truncate text-sm text-gray-100">
+                            {registeredUser.gmail}
+                          </p>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
