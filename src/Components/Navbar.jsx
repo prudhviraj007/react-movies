@@ -57,6 +57,11 @@ const Navbar = () => {
             Contact
           </Link>
         </li>
+        <li>
+          <Link to="/profile" className="hover:text-gray-300">
+            Profiles
+          </Link>
+        </li>
 
         {sessionUser ? (
           <li className="group relative">
