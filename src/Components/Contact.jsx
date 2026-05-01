@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const USERS_STORAGE_KEY = "movieAppUsers";
 
@@ -31,11 +31,35 @@ const getRegisteredUsers = () => {
   }
 };
 
+const getSessionUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("movieAppSession"));
+  } catch {
+    return null;
+  }
+};
+
 const Contact = () => {
+  const navigate = useNavigate();
   const [activeForm, setActiveForm] = useState("register");
   const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
   const [loginForm, setLoginForm] = useState(emptyLoginForm);
   const [message, setMessage] = useState("");
+  const [sessionUser, setSessionUser] = useState(() => getSessionUser());
+
+  useEffect(() => {
+    const syncSession = () => {
+      setSessionUser(getSessionUser());
+    };
+
+    window.addEventListener("storage", syncSession);
+    window.addEventListener("movieAppSessionChange", syncSession);
+
+    return () => {
+      window.removeEventListener("storage", syncSession);
+      window.removeEventListener("movieAppSessionChange", syncSession);
+    };
+  }, []);
 
   const handleRegisterChange = (event) => {
     const { name, value } = event.target;
@@ -111,8 +135,9 @@ const Contact = () => {
     if (savedUser) {
       localStorage.setItem("movieAppSession", JSON.stringify(savedUser));
       window.dispatchEvent(new Event("movieAppSessionChange"));
-      setMessage(`Login successful. Welcome back, ${savedUser.fullName}.`);
+      setSessionUser(savedUser);
       setLoginForm(emptyLoginForm);
+      navigate("/");
     } else {
       setMessage("Login failed. Please check your Gmail and password.");
     }
@@ -133,6 +158,33 @@ const Contact = () => {
         </div>
 
         <div className="mx-auto w-full max-w-2xl rounded-lg border border-light-100/10 bg-light-100/5 p-6 shadow-inner shadow-light-100/10 sm:p-8">
+          {sessionUser ? (
+            <div className="text-center">
+              {sessionUser.profileImage ? (
+                <img
+                  alt={sessionUser.fullName}
+                  className="mx-auto size-24 rounded-full border border-light-100/20 object-cover"
+                  src={sessionUser.profileImage}
+                />
+              ) : (
+                <div className="mx-auto grid size-24 place-items-center rounded-full bg-white text-3xl font-bold text-primary">
+                  {sessionUser.fullName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <h2 className="mt-5">You are already logged in</h2>
+              <p className="mt-3 text-light-200">
+                Welcome back, {sessionUser.fullName}. Logout from the navbar to
+                register or login with another account.
+              </p>
+              <Link
+                className="mt-6 inline-flex rounded-lg bg-white px-5 py-3 font-semibold text-primary transition hover:bg-light-100"
+                to="/"
+              >
+                Go Home
+              </Link>
+            </div>
+          ) : (
+            <>
           <div className="grid grid-cols-2 gap-3 rounded-lg bg-primary p-2">
             <button
               className={`rounded-lg px-4 py-3 font-semibold transition ${
@@ -307,6 +359,8 @@ const Contact = () => {
                 </Link>
               )}
             </div>
+          )}
+            </>
           )}
         </div>
       </section>
